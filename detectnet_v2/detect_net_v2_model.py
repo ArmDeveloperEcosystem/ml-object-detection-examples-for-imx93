@@ -15,9 +15,12 @@ except:
 
 class DetectNetV2Model:
     def __init__(self, model_path, num_threads=os.cpu_count()):
+        ethosu_delegate = tflite.load_delegate("/usr/lib/libethosu_delegate.so")
+
         self.interpreter = tflite.Interpreter(
             model_path=model_path,
             num_threads=num_threads,
+            experimental_delegates=[ethosu_delegate],
         )
 
         self.interpreter.allocate_tensors()
