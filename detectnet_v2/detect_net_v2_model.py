@@ -15,15 +15,26 @@ except:
 
 class DetectNetV2Model:
     def __init__(self, model_path, num_threads=os.cpu_count()):
-        ethosu_delegate = tflite.load_delegate("/usr/lib/libethosu_delegate.so")
+        delegates = []
 
-        self.interpreter = tflite.Interpreter(
-            model_path=model_path,
-            num_threads=num_threads,
-            experimental_delegates=[ethosu_delegate],
-        )
+        for _ in range(2):
+            try:
+                self.interpreter = tflite.Interpreter(
+                    model_path=model_path,
+                    num_threads=num_threads,
+                    experimental_delegates=delegates,
+                )
 
-        self.interpreter.allocate_tensors()
+                self.interpreter.allocate_tensors()
+            except RuntimeError as re:
+                if len(
+                    delegates
+                ) == 0 and "Encountered unresolved custom op: ethos-u." in str(re):
+                    # retry with the Ethos-U delegate
+                    delegates = [tflite.load_delegate("/usr/lib/libethosu_delegate.so")]
+                    continue
+
+                raise re
 
         input_details = self.interpreter.get_input_details()
         output_details = self.interpreter.get_output_details()
